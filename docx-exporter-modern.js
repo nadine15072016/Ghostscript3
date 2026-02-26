@@ -142,7 +142,15 @@ async function exportLaporanToWord() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'laporan.docx';
+        // Generate nama file
+        let bulan = '';
+        try {
+            bulan = document.getElementById('periode_bulan')?.value || '';
+        } catch(e) {}
+        const now = new Date();
+        const tanggal = now.toISOString().slice(0,10).replace(/-/g,'');
+        const jam = String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
+        a.download = `EVIDANCE_${bulan}_${tanggal}_${jam}.docx`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
