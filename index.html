@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>EVIDEN LCS DIGITAL</title>
+        <script src="indexeddb-helper.js"></script>
+        <!-- Library docx.js dari CDN -->
+        <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+        <script src="docx-exporter-modern.js"></script>
+
+        <!-- ===================== STYLE (CSS) ===================== -->
+        <style>
+        @page { size: A4; margin: 0; }
+        body { font-family: Arial, sans-serif; background: #525659; margin: 0; padding: 0; }
+        .kertas-a4 { width: 210mm; min-height: 297mm; padding: 15mm 20mm; margin: 20px auto; background: white; box-sizing: border-box; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        .judul-laporan { text-align: center; font-weight: bold; font-size: 14pt; margin-bottom: 25px; text-transform: uppercase; line-height: 1.3; }
+        .catatan { display: none !important; }        
+        .identitas { width: 100% !important; border-collapse: collapse !important; margin-bottom: 20px; font-size: 11pt; table-layout: fixed; border: none !important; }
+        .identitas td { padding: 4px 0 !important; vertical-align: top; border: none !important; background: transparent !important; }
+        .label-id { width: 140px !important; font-weight: bold; }
+        .titik-id { width: 20px !important; text-align: center; font-weight: bold; }
+        .identitas input { width: 100% !important; border: none !important; background: transparent !important; outline: none; font-family: Arial; font-size: 11pt; color: black !important; padding: 0 !important; margin: 0 !important; box-sizing: border-box !important; }
+        .style-periode { font-weight: bold; text-transform: uppercase; }
+        .style-nama { font-weight: normal; }
+        
+        table.tabel-data { width: 100%; border-collapse: collapse; table-layout: fixed; border: 2px solid black; }
+        table.tabel-data th { background-color: #666666; color: white; padding: 10px 5px; border: 1px solid black; font-weight: bold; text-align: center; vertical-align: middle; text-transform: uppercase; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        table.tabel-data td { border: 1px solid black; padding: 0; vertical-align: middle; }
+        
+        .col-no { width: 110px; }
+        .col-judul { width: 180px; }
+        .td-no { text-align: center; height: 190px; vertical-align: middle; }
+        
+        .input-tgl { width: 100% !important; height: 100% !important; border: none !important; text-align: center !important; font-weight: normal !important; font-size: 10pt !important; background: transparent !important; outline: none !important; font-family: Arial, sans-serif !important; color: #000 !important; padding: 0 !important; margin: 0 !important; line-height: normal !important; box-sizing: border-box !important; }
+        .judul-wrapper { display: flex !important; align-items: center !important; justify-content: flex-start !important; height: 190px !important; padding: 0 10px !important; box-sizing: border-box !important; margin: 0 !important; }
+        textarea.input-judul { width: 100% !important; height: 90px !important; border: none !important; resize: none !important; font-family: Arial, sans-serif !important; font-size: 10pt !important; background: transparent !important; outline: none !important; overflow: hidden !important; line-height: 1.3 !important; padding: 0 !important; margin: 0 !important; box-sizing: border-box !important; }
+        
+        .foto-container { border-radius: 4px; width: 100px; height: 180px; border: 1px dashed #ccc; margin: 5px auto; position: relative; background-color: #f4f4f4; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .img-preview { width: 100%; height: 100%; object-fit: fill; display: none; }
+        .file-input { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 5; }
+        .placeholder-text { font-size: 8pt; color: #888; text-align: center; }
+        
+        .toolbar { padding: max(10px, env(safe-area-inset-top)) 10px 10px 10px; position: fixed; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 5px; z-index: 9999; }
+        button, .btn-link { padding: 12px 20px; cursor: pointer; border: none; border-radius: 8px; color: white; font-weight: bold; box-shadow: 2px 2px 5px rgba(0,0,0,0.3); text-decoration: none; display: inline-flex; align-items: center; font-size: 14px; }
+        .btn-print { background: #1e7e34; }
+        .btn-reset { background: #e74c3c; }
+        .btn-lcs { background: #198754; }
+        .btn-restore {
+            background: #6c757d;
+            color: #fff;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+            display: inline-flex;
+            align-items: center;
+            font-size: 14px;
+            cursor: pointer;
+            margin-bottom: 4px;
+            transition: background 0.2s;
+        }
+        .btn-restore:hover {
+            background: #495057;
+        }
+        .btn-restore input[type="file"] {
+            display: none;
+        }
+
+        .action-buttons { text-align: center; margin-top: 15px; display: flex; justify-content: center; gap: 10px; }
+        .btn-action { background: #555; padding: 10px 20px; font-size: 14px; }
+
+        @media screen and (max-width: 768px) {
+            html, body { margin: 0; padding: 5px; background: #ddd; }
+            .kertas-a4 { width: 97%; padding: 15px; margin: 0; box-shadow: none; box-sizing: border-box; }
+            .judul-laporan { font-size: 11pt; margin-top: 40px; }
+            .identitas td { display: block; width: 100%; }
+            .label-id { width: 100% !important; }
+            .titik-id { display: none !important; }
+            .identitas input { width: 100% !important; border-bottom: 1px solid #ccc !important;  margin-bottom: 10px !important; }
+            .catatan { display: block !important; font-size: 11px !important; font-style: italic !important; color:red; margin-bottom: 2px !important;}
+            .tabel-data thead { display: none !important; }
+            table.tabel-data, .tabel-data tbody, .tabel-data tr, .tabel-data td { display: block; width: 100%; border: none; }
+            .tabel-data tr { background: #f9f9f9; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 20px; padding: 15px; box-sizing: border-box; }
+            .td-no { height: auto; text-align: center; border: 1px solid #ccc !important; border-radius: 10px; background: white; padding: 10px !important; margin-bottom: 15px; box-sizing: border-box; }
+            .td-judul { border: 1px solid #ccc !important; border-radius: 10px; background: white; padding: 10px; margin-bottom: 15px; box-sizing: border-box; display: block; }
+            .judul-wrapper { height: auto !important; padding: 0 !important; }
+            textarea.input-judul { height: 80px !important; width: 100% !important; border: none !important; background: transparent !important; padding: 0 !important; outline: none !important; resize: none !important; }
+            .td-foto { display: inline-block !important; width: 31% !important; vertical-align: top;border-radius: 3px; }
+            .foto-container { width: 95%; height: 140px; margin: 0 auto; background: white; }
+            
+            .toolbar { position: fixed; top: 0; left: 0; right: 0; background: #333; display: flex; flex-direction: row; padding: max(10px, env(safe-area-inset-top)) 10px 10px 10px; gap: 5px; box-sizing: border-box; z-index: 9999; margin: 0; border: none; }
+            button, .btn-link { flex: 1; margin: 0 !important; justify-content: center; padding: 10px 5px; font-size: 11px; box-sizing: border-box; width: auto; }
+            
+            .action-buttons { margin-bottom: 30px; }
+        }
+
+        @media print {
+            html, body { height: auto; overflow: visible; }
+            .toolbar, #header, #footer, .sidebar, .comments, .action-buttons, #filter-bar, #pagination-bar, #jumlah-data-eviden { display: none !important; }
+            .kertas-a4 { width: 210mm !important; min-height: 297mm !important; height: auto !important; padding: 10mm 20mm !important; margin: 0 !important; border: none !important; box-shadow: none !important; page-break-after: avoid !important; overflow: visible !important; }
+            .judul-laporan { width: 110% !important; margin: 0 -5% 15px -5% !important; line-height: 1.1 !important; font-size: 13pt !important; }
+            .identitas { margin-top: 40px; margin-bottom: 25px !important; }
+            
+            table.tabel-data { display: table !important; width: 100% !important; page-break-inside: auto; }
+            .tabel-data tr { display: table-row !important; page-break-inside: avoid; page-break-after: auto; }
+            .tabel-data td { display: table-cell !important; border: 1px solid black !important; }
+            .td-no, .judul-wrapper { height: 165px !important; }
+            .foto-container { height: 170px !important; border: none !important; background: transparent !important; }
+            .placeholder-text { display: none !important; }
+            ::placeholder { color: transparent !important; }
+            #periode_bulan, #periode_tahun { display: none !important; }
+            #periode_teks { display: inline !important; }
+        }
+    </style>
+</head>
+<body>
+<!-- ===================== NOTIFIKASI DATA TIDAK LENGKAP ===================== -->
+<div id="notif-incomplete" style="display:none;position:fixed;top:70px;right:20px;z-index:99999;background:#f44336;color:#fff;padding:18px 28px 18px 18px;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,0.18);font-size:15px;font-weight:bold;min-width:320px;max-width:420px;transition:all 0.3s;">
+    <div style="display:flex;align-items:flex-start;gap:6px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10" stroke="#fff" stroke-width="2" fill="#f44336"/><line x1="12" y1="8" x2="12" y2="13" stroke="#fff" stroke-width="2"/><circle cx="12" cy="16" r="1.2" fill="#fff"/></svg>
+        <div>
+            <div id="notif-incomplete-title" style="font-size:11px;font-weight:bold;margin-bottom:2px;">PERINGATAN DATA BELUM LENGKAP</div>
+            <div id="notif-incomplete-detail" style="font-size:10px;line-height:1.3;"></div>
+        </div>
+    </div>
+    <button id="notif-incomplete-close" style="position:absolute;top:2px;right:7px;background:transparent;border:none;color:#fff;font-size:13px;cursor:pointer;">&times;</button>
+</div>
+<!-- ===================== NOTIFIKASI ===================== -->
+<div id="notif-unsaved" style="display:none;position:fixed;top:20px;right:20px;z-index:99999;background:#ffc107;color:#333;padding:6px 10px;border-radius:5px;box-shadow:0 2px 8px rgba(0,0,0,0.18);font-size:11px;font-weight:bold;">Ada perubahan data yang belum disimpan!</div>
+
+<!-- ===================== TOOLBAR ===================== -->
+
+
+<div class="toolbar" id="toolbar">
+    <button class="btn-action" style="background:#007bff; margin-bottom:4px;" onclick="simpanSemuaData()">
+        <!-- Icon Simpan -->
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align: text-bottom;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline></svg> SIMPAN
+    </button>
+    <button class="btn-action" style="background:#ffc107; margin-bottom:4px;" onclick="window.location.href='https://nadine15072016.github.io/Ghostscript1/'">
+        <!-- Icon Home -->
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align: text-bottom;"><path d="M3 9l9-7 9 7"></path><path d="M9 22V12H15V22"></path></svg> HOME
+    </button>
+    <button class="btn-action" style="background:#17a2b8; margin-bottom:4px;" onclick="backupData()">
+        <!-- Icon Backup -->
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align: text-bottom;"><path d="M12 5v14m0 0l-6-6m6 6l6-6"/></svg> BACKUP DATA
+    </button>
+    <label class="btn-restore">
+        <!-- Icon Restore -->
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align: text-bottom;"><path d="M12 19V5m0 0l-6 6m6-6l6 6"/></svg> RESTORE DATA
+        <input type="file" accept="application/json" onchange="restoreData(event)">
+    </label>
+    <button class="btn-action" style="background:#4F81BD; margin-bottom:4px;" onclick="exportLaporanToWord()">
+        <!-- Icon Word -->
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align: text-bottom;"><rect x="3" y="3" width="18" height="18" rx="2"/><text x="8" y="16" font-size="8" fill="#fff">W</text></svg> SIMPAN KE WORD
+    </button>
+    <button class="btn-print" style="margin-bottom:4px;" onclick="cetakPDFCustom()">
+        <!-- Icon PDF -->
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> PDF
+    </button>
+    <button class="btn-reset" style="margin-bottom:4px;" onclick="resetData()">
+        <!-- Icon Reset -->
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg> RESET
+    </button>
+    <a class="btn-link btn-lcs" style="margin-bottom:0;" href="https://dev.epusluh.id/lcs/list">
+        <!-- Icon LCS -->
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line></svg> LCS
+    </a>
+</div>
+
+<!-- ===================== KERTAS A4 (ISI UTAMA) ===================== -->
+<div class="kertas-a4" id="kertas-a4">
+        <!-- ===================== FILTER & SEARCH ===================== -->
+        <div id="filter-bar" style="margin: 0 0 18px 0; display: flex; gap: 10px; justify-content: flex-start; align-items: center;">
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; width: 100%;">
+                <input type="date" id="filter-tanggal" placeholder="Tanggal" style="padding:4px 6px; font-size:11px; width:120px; border-radius:4px; border:1px solid #ccc;">
+                <span style="font-size:11px;">s/d</span>
+                <input type="date" id="filter-tanggal-akhir" placeholder="Tanggal Akhir" style="padding:4px 6px; font-size:11px; width:120px; border-radius:4px; border:1px solid #ccc;">
+                <input type="text" id="filter-judul" placeholder="Judul Konten" style="padding:4px 6px; font-size:11px; width:110px; border-radius:4px; border:1px solid #ccc;">
+                <input type="text" id="filter-wilayah" placeholder="Wilayah" style="padding:4px 6px; font-size:11px; width:100px; border-radius:4px; border:1px solid #ccc;">
+                <select id="filter-bulan" style="padding:4px 6px; font-size:11px; width:85px; border-radius:4px; border:1px solid #ccc;">
+                    <option value="">Bulan</option>
+                    <option value="01">Januari</option>
+                    <option value="02">Februari</option>
+                    <option value="03">Maret</option>
+                    <option value="04">April</option>
+                    <option value="05">Mei</option>
+                    <option value="06">Juni</option>
+                    <option value="07">Juli</option>
+                    <option value="08">Agustus</option>
+                    <option value="09">September</option>
+                    <option value="10">Oktober</option>
+                    <option value="11">November</option>
+                    <option value="12">Desember</option>
+                </select>
+                <select id="filter-tahun" style="padding:4px 6px; font-size:11px; width:65px; border-radius:4px; border:1px solid #ccc;"></select>
+                <button onclick="applyFilter()" style="padding:4px 10px; font-size:11px; background:#007bff; color:white; border:none; border-radius:4px;">Filter</button>
+                <button onclick="resetFilter()" style="padding:4px 10px; font-size:11px; background:#6c757d; color:white; border:none; border-radius:4px;">Reset</button>
+                <button onclick="tampilkanSemuaEviden()" style="padding:4px 10px; font-size:11px; background:#198754; color:white; border:none; border-radius:4px;">Semua Eviden</button>
+            </div>
+        </div>
+
+        <!-- PAGINATION DIHILANGKAN -->
+        <div id="pagination-bar" style="display:none"></div>
+    <!-- Judul Laporan -->
+    <div class="judul-laporan">
+        LAPORAN PENDERASAN INFORMASI DAN PEMBANGUNAN PERTANIAN<br>
+        PENYULUH PERTANIAN TAHUN <span id="tahun-judul">2026</span>
+    </div>
+
+    <!-- Form Identitas Penyuluh -->
+    <section id="form-identitas">
+        <table class="identitas">
+            <tbody>
+                <tr>
+                    <td class="label-id">PERIODE</td>
+                    <td class="titik-id">:</td>
+                    <td>
+                        <select id="periode_bulan" class="style-periode" onchange="updatePeriode()">
+                            <option value="Januari">Januari</option>
+                            <option value="Februari">Februari</option>
+                            <option value="Maret">Maret</option>
+                            <option value="April">April</option>
+                            <option value="Mei">Mei</option>
+                            <option value="Juni">Juni</option>
+                            <option value="Juli">Juli</option>
+                            <option value="Agustus">Agustus</option>
+                            <option value="September">September</option>
+                            <option value="Oktober">Oktober</option>
+                            <option value="November">November</option>
+                            <option value="Desember">Desember</option>
+                        </select>
+                        <select id="periode_tahun" class="style-periode" onchange="updatePeriode()"></select>
+                        <input type="hidden" id="id_periode" class="style-periode" placeholder="Rest Untuk Isi Otomatis" oninput="simpanTeks('id_periode')">
+                        <span id="periode_teks" style="display:none; font-weight:bold;"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label-id">NAMA PENYULUH</td>
+                    <td class="titik-id">:</td>
+                    <td><input type="text" id="id_nama" class="style-nama" placeholder="Contoh : TRI FEBRIANTI, A.Md" oninput="this.value = this.value.toUpperCase(); simpanTeks('id_nama')"></td>
+                </tr>
+                <tr>
+                    <td class="label-id">NIP.</td>
+                    <td class="titik-id">:</td>
+                    <td><input type="text" id="id_nip" placeholder="Contoh : 19920203 2025XX X XXX" maxlength="21" oninput="formatNIP(this); simpanTeks('id_nip')"></td>
+                </tr>
+                <tr>
+                    <td class="label-id">WILAYAH BINAAN</td>
+                    <td class="titik-id">:</td>
+                    <td>
+                        <textarea id="id_wilayah" rows="2" style="width:100%; resize:none; font-family:Arial; font-size:11pt; color:black; border:none; background:transparent; outline:none; box-sizing:border-box; padding:0; margin:0;" placeholder="Contoh : Desa ... Kec. ... Kab. ..." oninput="this.value = this.value.toUpperCase(); simpanTeks('id_wilayah')"></textarea>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Tabel Eviden -->
+    <section id="tabel-eviden">
+        <div id="jumlah-data-eviden" style="margin-bottom:8px;font-weight:bold;color:#198754;"></div>
+        <table class="tabel-data">
+            <thead>
+                <tr>
+                    <th rowspan="2" class="col-no">TANGGAL</th>
+                    <th rowspan="2" class="col-judul">Judul Konten</th>
+                    <th colspan="3">EVIDEN</th>
+                </tr>
+                <tr>
+                    <th>Like</th>
+                    <th>Comen</th>
+                    <th>Share</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- Baris eviden akan di-generate oleh JS, default 3 baris -->
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Tombol Aksi -->
+    <div class="action-buttons" id="action-buttons">
+        <button class="btn-action" onclick="tambahBaris()">
+            <!-- Icon Tambah Baris -->
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align: text-bottom;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Tambah Baris
+        </button>
+        <button class="btn-action" onclick="hapusBaris()">
+            <!-- Icon Hapus Baris -->
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align: text-bottom;"><line x1="5" y1="12" x2="19" y2="12"></line></svg> Hapus Baris
+        </button>
+    </div>
+</div>
+
+<!-- ===================== SCRIPT (JAVASCRIPT) ===================== -->
+<script>
+// Tampilkan data sesuai periode yang dipilih pada form identitas
+document.addEventListener('DOMContentLoaded', function() {
+    var bulanPeriode = document.getElementById('periode_bulan');
+    var tahunPeriode = document.getElementById('periode_tahun');
+    if (bulanPeriode && tahunPeriode) {
+        bulanPeriode.addEventListener('change', filterByPeriode);
+        tahunPeriode.addEventListener('change', filterByPeriode);
+    }
+});
+
+function filterByPeriode() {
+    const bulan = document.getElementById('periode_bulan').value;
+    const tahun = document.getElementById('periode_tahun').value;
+    if (!bulan && !tahun) {
+        renderFilteredTable(evidenDataCache, 1);
+        return;
+    }
+    let bulanNum = '';
+    switch(bulan) {
+        case 'Januari': bulanNum = '01'; break;
+        case 'Februari': bulanNum = '02'; break;
+        case 'Maret': bulanNum = '03'; break;
+        case 'April': bulanNum = '04'; break;
+        case 'Mei': bulanNum = '05'; break;
+        case 'Juni': bulanNum = '06'; break;
+        case 'Juli': bulanNum = '07'; break;
+        case 'Agustus': bulanNum = '08'; break;
+        case 'September': bulanNum = '09'; break;
+        case 'Oktober': bulanNum = '10'; break;
+        case 'November': bulanNum = '11'; break;
+        case 'Desember': bulanNum = '12'; break;
+    }
+    let filtered = evidenDataCache.filter(row => {
+        if (!row.tanggal) return false;
+        const tglArr = row.tanggal.split('-');
+        const rowTahun = tglArr[0];
+        const rowBulan = tglArr[1];
+        let match = true;
+        if (bulan && rowBulan !== bulanNum) match = false;
+        if (tahun && rowTahun !== tahun) match = false;
+        return match;
+    });
+    renderFilteredTable(filtered, 1);
+}
+
+// Menu tampilkan semua eviden
+function tampilkanSemuaEviden() {
+    renderFilteredTable(evidenDataCache, 1);
+    // Reset filter form
+    document.getElementById('filter-tanggal').value = '';
+    document.getElementById('filter-judul').value = '';
+    document.getElementById('filter-wilayah').value = '';
+    document.getElementById('filter-bulan').value = '';
+    document.getElementById('filter-tahun').value = '';
+}
+// ===================== NOTIFIKASI OTOMATIS DATA BELUM TERSIMPAN =====================
+let dataChanged = false;
+let notifTimeout = null;
+function showUnsavedNotif() {
+    const notif = document.getElementById('notif-unsaved');
+    notif.style.display = 'block';
+    clearTimeout(notifTimeout);
+    notifTimeout = setTimeout(()=>{ notif.style.display = 'none'; }, 4000);
+}
+function hideUnsavedNotif() {
+    document.getElementById('notif-unsaved').style.display = 'none';
+}
+function markDataChanged() {
+    dataChanged = true;
+    showUnsavedNotif();
+}
+function markDataSaved() {
+    dataChanged = false;
+    hideUnsavedNotif();
+}
+
+// Pantau perubahan input data utama
+document.addEventListener('DOMContentLoaded', function() {
+    ['id_periode','id_nama','id_nip','id_wilayah'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el) el.addEventListener('input', markDataChanged);
+    });
+    // Pantau perubahan pada tabel eviden
+    document.getElementById('table-body').addEventListener('input', markDataChanged, true);
+});
+
+// Override simpanSemuaData agar reset flag
+const _oriSimpanSemuaData = simpanSemuaData;
+simpanSemuaData = function() {
+    _oriSimpanSemuaData();
+    markDataSaved();
+}
+
+// Pengingat backup berkala saat aplikasi ingin ditutup
+window.addEventListener('beforeunload', function(e) {
+    if (dataChanged) {
+        e.preventDefault();
+        e.returnValue = '';
+        showUnsavedNotif();
+        return '';
+    }
+    // Pengingat backup minimal 7 hari sekali
+    const lastBackup = localStorage.getItem('lastBackupTime');
+    const now = Date.now();
+    if (!lastBackup || now - parseInt(lastBackup) > 7*24*60*60*1000) {
+        alert('Sudah lebih dari 7 hari Anda belum melakukan backup data. Silakan backup sebelum keluar aplikasi!');
+        localStorage.setItem('lastBackupTime', now.toString());
+    }
+});
+// ===================== INISIALISASI & VARIABEL GLOBAL =====================
+let evidenDataCache = [];
+let currentPage = 1;
+const pageSize = 10;
+
+// ===================== FITUR BACKUP & RESTORE DATA =====================
+function backupData() {
+    const data = {...localStorage};
+    // Ambil semua foto dari IndexedDB
+    if (window.idbGetAllFotoKeys && window.idbGetFoto) {
+        idbGetAllFotoKeys().then(keys => {
+            const fotoPromises = keys.map(k => idbGetFoto(k).then(val => [k, val]));
+            Promise.all(fotoPromises).then(fotoArr => {
+                const fotoData = {};
+                fotoArr.forEach(([k, v]) => { if (v) fotoData[k] = v; });
+                data.__fotoIndexedDB = fotoData;
+                const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const now = new Date();
+                const tanggal = now.toISOString().slice(0,10);
+                const jam = String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
+                a.download = 'eviden-backup-' + tanggal + '-' + jam + '.json';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 100);
+            });
+        });
+    } else {
+        // Fallback: backup tanpa foto IndexedDB
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const now = new Date();
+        const tanggal = now.toISOString().slice(0,10);
+        const jam = String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
+        a.download = 'eviden-backup-' + tanggal + '-' + jam + '.json';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+    }
+}
+
+function restoreData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (typeof data !== 'object' || Array.isArray(data)) throw new Error('Format tidak valid');
+            if (confirm('Data lama akan diganti dengan data backup. Lanjutkan?')) {
+                localStorage.clear();
+                // Restore localStorage
+                for (const key in data) {
+                    if (key !== '__fotoIndexedDB') {
+                        localStorage.setItem(key, data[key]);
+                    }
+                }
+                // Restore foto ke IndexedDB jika ada
+                if (data.__fotoIndexedDB && window.idbSetFoto) {
+                    const fotoObj = data.__fotoIndexedDB;
+                    const fotoKeys = Object.keys(fotoObj);
+                    let setPromises = fotoKeys.map(k => idbSetFoto(k, fotoObj[k]));
+                    Promise.all(setPromises).then(() => {
+                        alert('Restore berhasil! Halaman akan dimuat ulang.');
+                        location.reload();
+                    });
+                } else {
+                    alert('Restore berhasil! Halaman akan dimuat ulang.');
+                    location.reload();
+                }
+            }
+        } catch (err) {
+            alert('File backup tidak valid!');
+        }
+    };
+    reader.readAsText(file);
+    // Reset input agar bisa upload file yang sama lagi jika perlu
+    event.target.value = '';
+}
+var tbody = document.getElementById('table-body');
+var jumlahBaris = parseInt(localStorage.getItem('jumlahBaris')) || 1;
+
+// ===================== EVENT: ISI OTOMATIS PERIODE DENGAN PICKER & SINKRONISASI DATA =====================
+document.addEventListener('DOMContentLoaded', function() {
+    // Ambil semua tanggal eviden yang sudah diinput
+    let jumlahBarisLokal = parseInt(localStorage.getItem('jumlahBaris')) || 1;
+    let maxBaris = jumlahBarisLokal;
+    let bulanSet = new Set();
+    let tahunSet = new Set();
+    let dataPeriodeTerbaru = {bulan: '', tahun: ''};
+    evidenDataCache = [];
+    for (let i = 1; i <= maxBaris; i++) {
+        let tgl = localStorage.getItem(`tgl_${i}`) || '';
+        evidenDataCache.push({
+            idx: i,
+            tanggal: tgl,
+            judul: localStorage.getItem(`judul_${i}`) || '',
+            wilayah: localStorage.getItem('id_wilayah') || ''
+        });
+        if (tgl && tgl.length >= 7) {
+            let arr = tgl.split('-');
+            if (arr.length >= 2) {
+                tahunSet.add(arr[0]);
+                bulanSet.add(arr[1]);
+                // Simpan data periode terbaru (terakhir ditemukan)
+                dataPeriodeTerbaru = {bulan: arr[1], tahun: arr[0]};
+            }
+        }
+        if (i > maxBaris) maxBaris = i;
+    }
+    // Inisialisasi select periode_bulan dan periode_tahun hanya dari data yang ada
+    var bulanSelect = document.getElementById('periode_bulan');
+    var tahunSelect = document.getElementById('periode_tahun');
+    if (bulanSelect) {
+        let bulanArr = Array.from(bulanSet).sort();
+        bulanSelect.innerHTML = '';
+        bulanArr.forEach(b => {
+            let namaBulan = '';
+            switch(b) {
+                case '01': namaBulan = 'Januari'; break;
+                case '02': namaBulan = 'Februari'; break;
+                case '03': namaBulan = 'Maret'; break;
+                case '04': namaBulan = 'April'; break;
+                case '05': namaBulan = 'Mei'; break;
+                case '06': namaBulan = 'Juni'; break;
+                case '07': namaBulan = 'Juli'; break;
+                case '08': namaBulan = 'Agustus'; break;
+                case '09': namaBulan = 'September'; break;
+                case '10': namaBulan = 'Oktober'; break;
+                case '11': namaBulan = 'November'; break;
+                case '12': namaBulan = 'Desember'; break;
+            }
+            let opt = document.createElement('option');
+            opt.value = namaBulan;
+            opt.text = namaBulan;
+            bulanSelect.appendChild(opt);
+        });
+    }
+    if (tahunSelect) {
+        let tahunArr = Array.from(tahunSet).sort();
+        tahunSelect.innerHTML = '';
+        tahunArr.forEach(t => {
+            let opt = document.createElement('option');
+            opt.value = t;
+            opt.text = t;
+            tahunSelect.appendChild(opt);
+        });
+    }
+    // Set default ke data terbaru jika ada
+    if (bulanSelect && bulanSelect.options.length > 0 && dataPeriodeTerbaru.bulan) {
+        for (let i = 0; i < bulanSelect.options.length; i++) {
+            if (bulanSelect.options[i].value === getNamaBulan(dataPeriodeTerbaru.bulan)) {
+                bulanSelect.selectedIndex = i;
+                break;
+            }
+        }
+    }
+    if (tahunSelect && tahunSelect.options.length > 0 && dataPeriodeTerbaru.tahun) {
+        for (let i = 0; i < tahunSelect.options.length; i++) {
+            if (tahunSelect.options[i].value === dataPeriodeTerbaru.tahun) {
+                tahunSelect.selectedIndex = i;
+                break;
+            }
+        }
+    }
+    updatePeriode();
+    // Tampilkan data sesuai periode default
+    if (bulanSelect && tahunSelect && bulanSelect.value && tahunSelect.value) {
+        filterByPeriode();
+    } else {
+        renderFilteredTable(evidenDataCache);
+    }
+    jumlahBaris = maxBaris;
+    localStorage.setItem('jumlahBaris', maxBaris);
+    if (typeof muatDataLokal === 'function') {
+        muatDataLokal();
+    }
+});
+
+// Helper untuk konversi kode bulan ke nama bulan
+function getNamaBulan(bulanKode) {
+    switch(bulanKode) {
+        case '01': return 'Januari';
+        case '02': return 'Februari';
+        case '03': return 'Maret';
+        case '04': return 'April';
+        case '05': return 'Mei';
+        case '06': return 'Juni';
+        case '07': return 'Juli';
+        case '08': return 'Agustus';
+        case '09': return 'September';
+        case '10': return 'Oktober';
+        case '11': return 'November';
+        case '12': return 'Desember';
+        default: return '';
+    }
+}
+
+
+// Inisialisasi filter tahun (otomatis dari 5 tahun lalu sampai 5 tahun ke depan)
+document.addEventListener('DOMContentLoaded', function() {
+    var tahunSelect = document.getElementById('filter-tahun');
+    if (tahunSelect) {
+        var tahunSekarang = new Date().getFullYear();
+        for (var t = tahunSekarang - 5; t <= tahunSekarang + 5; t++) {
+            var opt = document.createElement('option');
+            opt.value = t;
+            opt.text = t;
+            tahunSelect.appendChild(opt);
+        }
+        tahunSelect.value = '';
+    }
+});
+
+function applyFilter() {
+    const tgl = document.getElementById('filter-tanggal').value;
+    const tglAkhir = document.getElementById('filter-tanggal-akhir').value;
+    const judul = document.getElementById('filter-judul').value.toLowerCase();
+    const wilayah = document.getElementById('filter-wilayah').value.toLowerCase();
+    const bulan = document.getElementById('filter-bulan').value;
+    const tahun = document.getElementById('filter-tahun').value;
+    let filtered = evidenDataCache.filter(row => {
+        let match = true;
+        // Filter range tanggal (pakai Date agar valid)
+        if (tgl && tglAkhir) {
+            if (!row.tanggal) match = false;
+            else {
+                let tglRow = new Date(row.tanggal);
+                let tglStart = new Date(tgl);
+                let tglEnd = new Date(tglAkhir);
+                // Normalisasi jam agar tidak masalah di perbandingan
+                tglRow.setHours(0,0,0,0);
+                tglStart.setHours(0,0,0,0);
+                tglEnd.setHours(0,0,0,0);
+                if (tglRow < tglStart || tglRow > tglEnd) match = false;
+            }
+        } else if (tgl) {
+            if (!row.tanggal) match = false;
+            else {
+                let tglRow = new Date(row.tanggal);
+                let tglStart = new Date(tgl);
+                tglRow.setHours(0,0,0,0);
+                tglStart.setHours(0,0,0,0);
+                if (tglRow.getTime() !== tglStart.getTime()) match = false;
+            }
+        }
+        // Filter judul
+        if (judul && !row.judul.toLowerCase().includes(judul)) match = false;
+        // Filter wilayah
+        if (wilayah && !row.wilayah.toLowerCase().includes(wilayah)) match = false;
+        // Filter bulan/tahun
+        if (bulan || tahun) {
+            if (!row.tanggal) return false;
+            const tglArr = row.tanggal.split('-');
+            const rowTahun = tglArr[0];
+            const rowBulan = tglArr[1];
+            if (bulan && rowBulan !== bulan) match = false;
+            if (tahun && rowTahun !== tahun) match = false;
+        }
+        return match;
+    });
+    currentPage = 1;
+    renderFilteredTable(filtered, currentPage);
+    cekNotifikasiDataTidakLengkap(filtered);
+}
+
+// Notifikasi otomatis jika ada data tidak lengkap pada periode tertentu
+function cekNotifikasiDataTidakLengkap(dataArr) {
+    let adaKosong = false;
+    let pesan = '';
+    let detailList = [];
+    dataArr.forEach(row => {
+        let detail = [];
+        if (!row.tanggal) detail.push('Tanggal belum diisi');
+        if (!row.judul) detail.push('Judul Konten belum diisi');
+        if (detail.length > 0) {
+            adaKosong = true;
+            let labelTanggal = row.tanggal ? row.tanggal : '<span style="color:#ffc107">(Tanggal kosong)</span>';
+            detailList.push(`<li><b>${labelTanggal}</b>: ${detail.join(' & ')}</li>`);
+        }
+    });
+    var notif = document.getElementById('notif-incomplete');
+    var detailDiv = document.getElementById('notif-incomplete-detail');
+    var closeBtn = document.getElementById('notif-incomplete-close');
+    if (adaKosong) {
+        notif.style.display = 'block';
+        detailDiv.innerHTML = `<ul style='margin:0 0 0 18px;padding:0 0 0 0;font-size:13px;'>${detailList.join('')}</ul>`;
+        // Hilang otomatis setelah 7 detik
+        if (notif.notifTimeout) clearTimeout(notif.notifTimeout);
+        notif.notifTimeout = setTimeout(function(){ notif.style.display = 'none'; }, 7000);
+        // Tombol silang manual
+        if (closeBtn) {
+            closeBtn.onclick = function() {
+                notif.style.display = 'none';
+                if (notif.notifTimeout) clearTimeout(notif.notifTimeout);
+            };
+        }
+    } else {
+        if (notif) notif.style.display = 'none';
+        if (notif && notif.notifTimeout) clearTimeout(notif.notifTimeout);
+    }
+}
+
+function resetFilter() {
+    document.getElementById('filter-tanggal').value = '';
+    document.getElementById('filter-judul').value = '';
+    document.getElementById('filter-wilayah').value = '';
+    currentPage = 1;
+    renderFilteredTable(evidenDataCache, currentPage);
+}
+
+function renderFilteredTable(dataArr) {
+    tbody.innerHTML = '';
+    // Urutkan dataArr berdasarkan tanggal (ascending, kosong di akhir)
+    dataArr = dataArr.slice().sort((a, b) => {
+        if (!a.tanggal && !b.tanggal) return 0;
+        if (!a.tanggal) return 1;
+        if (!b.tanggal) return -1;
+        return a.tanggal.localeCompare(b.tanggal);
+    });
+    const total = dataArr.length;
+    // Tampilkan jumlah data eviden
+    const jumlahDiv = document.getElementById('jumlah-data-eviden');
+    if (jumlahDiv) {
+        jumlahDiv.textContent = `Jumlah data eviden: ${total}`;
+    }
+    for (let i = 0; i < total; i++) {
+        tbody.appendChild(renderBarisHTML(dataArr[i].idx));
+    }
+    // Muat data lokal untuk baris yang dirender saja
+    for (let i = 0; i < total; i++) {
+        const idx = dataArr[i].idx;
+        const tEl = document.getElementById(`tgl_${idx}`);
+        if(localStorage.getItem(`tgl_${idx}`)) {
+            tEl.value = localStorage.getItem(`tgl_${idx}`);
+        }
+        if(localStorage.getItem(`judul_${idx}`)) {
+            document.getElementById(`judul_${idx}`).value = localStorage.getItem(`judul_${idx}`);
+        }
+        ['like', 'comen', 'share'].forEach(type => {
+            const key = `img_${type}_${idx}`;
+            idbGetFoto(key).then(result => {
+                if (result) {
+                    document.getElementById(key).src = result;
+                    document.getElementById(key).style.display = 'block';
+                    document.getElementById(`txt_${type}_${idx}`).style.display = 'none';
+                }
+            });
+        });
+    }
+    // Pagination dihilangkan, tidak perlu renderPaginationBar
+}
+
+// Fungsi renderPaginationBar dihilangkan
+
+// Fungsi gotoPage dihilangkan
+
+function updatePeriode() {
+    var bulan = document.getElementById('periode_bulan').value;
+    var tahun = document.getElementById('periode_tahun').value;
+    var periodeInput = document.getElementById('id_periode');
+    periodeInput.value = bulan + ' ' + tahun;
+    // Update tahun pada judul laporan
+    var tahunJudul = document.getElementById('tahun-judul');
+    if (tahunJudul) tahunJudul.textContent = tahun;
+    if (typeof simpanTeks === 'function') simpanTeks('id_periode');
+    var periodeTeks = document.getElementById('periode_teks');
+    if (periodeTeks) periodeTeks.textContent = (bulan + ' ' + tahun).toUpperCase();
+}
+
+// ===================== FUNGSI UTAMA DATA EVIDEN =====================
+function simpanSemuaData() {
+    // Simpan identitas
+    ['id_periode', 'id_nama', 'id_nip', 'id_wilayah'].forEach(id => {
+        var el = document.getElementById(id);
+        if (el) localStorage.setItem(id, el.value);
+    });
+    // Simpan data baris
+    for (let i = 1; i <= jumlahBaris; i++) {
+        var tgl = document.getElementById(`tgl_${i}`);
+        var judul = document.getElementById(`judul_${i}`);
+        if (tgl) localStorage.setItem(`tgl_${i}`, tgl.value);
+        if (judul) localStorage.setItem(`judul_${i}`, judul.value);
+        // Foto sekarang hanya disimpan di IndexedDB lewat prosesGambar
+    }
+    localStorage.setItem('jumlahBaris', jumlahBaris);
+    alert('Data berhasil disimpan!');
+}
+
+function tambahBaris() {
+    jumlahBaris++;
+    localStorage.setItem('jumlahBaris', jumlahBaris);
+    tbody.appendChild(renderBarisHTML(jumlahBaris));
+    // Isi tanggal otomatis dari baris sebelumnya jika ada, tanpa mengubah tanggal baris sebelumnya
+    var currTgl = document.getElementById(`tgl_${jumlahBaris}`);
+    if (jumlahBaris > 1) {
+        var prevTgl = document.getElementById(`tgl_${jumlahBaris - 1}`);
+        if (prevTgl && currTgl) {
+            if (prevTgl.value) {
+                currTgl.value = prevTgl.value;
+                localStorage.setItem(`tgl_${jumlahBaris}`, currTgl.value);
+            } else {
+                // Jika baris sebelumnya kosong, isi tanggal hari ini
+                var today = new Date();
+                var yyyy = today.getFullYear();
+                var mm = String(today.getMonth() + 1).padStart(2, '0');
+                var dd = String(today.getDate()).padStart(2, '0');
+                currTgl.value = `${yyyy}-${mm}-${dd}`;
+                localStorage.setItem(`tgl_${jumlahBaris}`, currTgl.value);
+            }
+        }
+    } else if (currTgl) {
+        // Jika baris pertama, isi tanggal hari ini
+        var today = new Date();
+        var yyyy = today.getFullYear();
+        var mm = String(today.getMonth() + 1).padStart(2, '0');
+        var dd = String(today.getDate()).padStart(2, '0');
+        currTgl.value = `${yyyy}-${mm}-${dd}`;
+        localStorage.setItem(`tgl_${jumlahBaris}`, currTgl.value);
+    }
+    // Tidak perlu muat ulang data lokal agar input lain tetap sinkron, cukup baris baru saja
+}
+
+function hapusBaris() {
+    if (jumlahBaris > 1) {
+        if(confirm("Hapus baris terakhir? Eviden di baris ini akan hilang.")) {
+            const barisTerakhir = document.getElementById(`baris_${jumlahBaris}`);
+            if (barisTerakhir) {
+                barisTerakhir.remove();
+            }
+            localStorage.removeItem(`tgl_${jumlahBaris}`);
+            localStorage.removeItem(`judul_${jumlahBaris}`);
+            // Hapus foto dari IndexedDB
+            ['like', 'comen', 'share'].forEach(type => {
+                const key = `img_${type}_${jumlahBaris}`;
+                idbDeleteFoto(key);
+            });
+            jumlahBaris--;
+            localStorage.setItem('jumlahBaris', jumlahBaris);
+        }
+    } else {
+        alert("Minimal harus ada 1 baris eviden.");
+    }
+}
+
+function renderBarisHTML(i) {
+    // Membuat elemen baris eviden baru
+    const tr = document.createElement('tr');
+    tr.id = `baris_${i}`;
+    tr.innerHTML = `
+        <td class="td-no">
+            <input type="date" id="tgl_${i}" class="input-tgl" oninput="sinkronisasiTanggal(this)">
+        </td>
+        <td class="td-judul">
+            <div class="judul-wrapper">
+                <textarea id="judul_${i}" class="input-judul" placeholder="Isi Judul Konten" oninput="simpanTeks('judul_${i}')"></textarea>
+            </div>
+        </td>
+        <td class="td-foto">
+            <div class="foto-container">
+                <span class="placeholder-text" id="txt_like_${i}">Foto<br>Evide Like</span>
+                <img src="" id="img_like_${i}" class="img-preview">
+                <input type="file" accept="image/*" class="file-input" onchange="prosesGambar(this, 'img_like_${i}', 'txt_like_${i}')">
+            </div>
+        </td>
+        <td class="td-foto">
+            <div class="foto-container">
+                <span class="placeholder-text" id="txt_comen_${i}">Foto<br>Eviden Comen</span>
+                <img src="" id="img_comen_${i}" class="img-preview">
+                <input type="file" accept="image/*" class="file-input" onchange="prosesGambar(this, 'img_comen_${i}', 'txt_comen_${i}')">
+            </div>
+        </td>
+        <td class="td-foto">
+            <div class="foto-container">
+                <span class="placeholder-text" id="txt_share_${i}">Foto<br>Eviden Share</span>
+                <img src="" id="img_share_${i}" class="img-preview">
+                <input type="file" accept="image/*" class="file-input" onchange="prosesGambar(this, 'img_share_${i}', 'txt_share_${i}')">
+            </div>
+        </td>
+    `;
+    return tr;
+}
+
+function cetakPDFCustom() {
+    window.print();
+}
+
+// ===================== FUNGSI BANTUAN =====================
+function simpanTeks(id) { 
+    localStorage.setItem(id, document.getElementById(id).value); 
+}
+
+function prosesGambar(input, imgId, textId) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById(imgId).src = e.target.result;
+            document.getElementById(imgId).style.display = 'block';
+            document.getElementById(textId).style.display = 'none';
+            // Simpan ke IndexedDB, bukan localStorage
+            idbSetFoto(imgId, e.target.result).catch(() => {});
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// ===================== FUNGSI FORMAT INPUT =====================
+function formatNama(input) {
+    let teks = input.value;
+    if (teks.includes(',')) {
+        let pisah = teks.split(',');
+        let nama = pisah[0].toUpperCase();
+        let gelar = pisah.slice(1).join(',');
+        input.value = nama + ',' + gelar;
+    } else {
+        input.value = teks.toUpperCase();
+    }
+}
+
+function formatAlamat(input) {
+    let teks = input.value;
+    let words = teks.split(' ');
+    for (let i = 0; i < words.length; i++) {
+        if (words[i].length > 0) {
+            words[i] = words[i].charAt(0).toUpperCase() + words[i].substring(1).toLowerCase();
+        }
+    }
+    input.value = words.join(' ');
+}
+
+function formatNIP(input) {
+    let value = input.value.replace(/\D/g, '');
+    if (value.length > 18) {
+        value = value.substr(0, 18);
+    }
+    let formatted = '';
+    if (value.length > 0) formatted += value.substr(0, 8);
+    if (value.length > 8) formatted += ' ' + value.substr(8, 6);
+    if (value.length > 14) formatted += ' ' + value.substr(14, 1);
+    if (value.length > 15) formatted += ' ' + value.substr(15, 3);
+    input.value = formatted;
+}
+
+// ===================== FUNGSI MUAT DATA LOKAL =====================
+function muatDataLokal() {
+    ['id_periode', 'id_nama', 'id_nip', 'id_wilayah'].forEach(id => { 
+        if(localStorage.getItem(id)) {
+            document.getElementById(id).value = localStorage.getItem(id); 
+        }
+    });
+
+    // Sinkronisasi picker bulan/tahun jika ada data lokal
+    const pInput = document.getElementById('id_periode');
+    if (pInput.value) {
+        var parts = pInput.value.split(' ');
+        if (parts.length === 2) {
+            var bulan = parts[0];
+            var tahun = parts[1];
+            var bulanSelect = document.getElementById('periode_bulan');
+            var tahunSelect = document.getElementById('periode_tahun');
+            if (bulanSelect && tahunSelect) {
+                bulanSelect.value = bulan;
+                tahunSelect.value = tahun;
+            }
+        }
+    }
+    updatePeriode();
+    var periodeTeks = document.getElementById('periode_teks');
+    if (periodeTeks) {
+        var bulan = document.getElementById('periode_bulan').value;
+        var tahun = document.getElementById('periode_tahun').value;
+        periodeTeks.textContent = (bulan + ' ' + tahun).toUpperCase();
+    }
+
+    for (let i = 1; i <= jumlahBaris; i++) {
+        const tEl = document.getElementById(`tgl_${i}`);
+        if(localStorage.getItem(`tgl_${i}`)) {
+            tEl.value = localStorage.getItem(`tgl_${i}`);
+        }
+        if(localStorage.getItem(`judul_${i}`)) {
+            document.getElementById(`judul_${i}`).value = localStorage.getItem(`judul_${i}`);
+        }
+        ['like', 'comen', 'share'].forEach(type => {
+            const key = `img_${type}_${i}`;
+            idbGetFoto(key).then(result => {
+                if (result) {
+                    document.getElementById(key).src = result;
+                    document.getElementById(key).style.display = 'block';
+                    document.getElementById(`txt_${type}_${i}`).style.display = 'none';
+                }
+            });
+        });
+    }
+}
+
+// ===================== FUNGSI RESET =====================
+function resetData() { 
+    if(confirm("Hapus semua data?")) { 
+        localStorage.clear(); 
+        // Hapus semua foto di IndexedDB
+        if (window.idbGetAllFotoKeys && window.idbDeleteFoto) {
+            idbGetAllFotoKeys().then(keys => {
+                if (Array.isArray(keys)) {
+                    let delPromises = keys.map(k => idbDeleteFoto(k));
+                    Promise.all(delPromises).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    location.reload();
+                }
+            }).catch(() => location.reload());
+        } else {
+            location.reload();
+        }
+    }
+}
+    </script>
+
+
+<div style="clear: both;"></div>
+</div>
+</div>
+</div></div>
+</div>
+</main>
+</div>
+<script type="text/javascript">
+</script>
+</body>
+</html>
