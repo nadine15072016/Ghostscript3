@@ -4,6 +4,7 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>EVIDEN LCS DIGITAL</title>
+        <script src="indexeddb-helper.js"></script>
 
         <!-- ===================== STYLE (CSS) ===================== -->
         <style>
@@ -238,17 +239,47 @@
 // ===================== FITUR BACKUP & RESTORE DATA =====================
 function backupData() {
     const data = {...localStorage};
-    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'eviden-backup-' + new Date().toISOString().slice(0,10) + '.json';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }, 100);
+    // Ambil semua foto dari IndexedDB
+    if (window.idbGetAllFotoKeys && window.idbGetFoto) {
+        idbGetAllFotoKeys().then(keys => {
+            const fotoPromises = keys.map(k => idbGetFoto(k).then(val => [k, val]));
+            Promise.all(fotoPromises).then(fotoArr => {
+                const fotoData = {};
+                fotoArr.forEach(([k, v]) => { if (v) fotoData[k] = v; });
+                data.__fotoIndexedDB = fotoData;
+                const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const now = new Date();
+                const tanggal = now.toISOString().slice(0,10);
+                const jam = String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
+                a.download = 'eviden-backup-' + tanggal + '-' + jam + '.json';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 100);
+            });
+        });
+    } else {
+        // Fallback: backup tanpa foto IndexedDB
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const now = new Date();
+        const tanggal = now.toISOString().slice(0,10);
+        const jam = String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
+        a.download = 'eviden-backup-' + tanggal + '-' + jam + '.json';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+    }
 }
 
 function restoreData(event) {
@@ -261,11 +292,25 @@ function restoreData(event) {
             if (typeof data !== 'object' || Array.isArray(data)) throw new Error('Format tidak valid');
             if (confirm('Data lama akan diganti dengan data backup. Lanjutkan?')) {
                 localStorage.clear();
+                // Restore localStorage
                 for (const key in data) {
-                    localStorage.setItem(key, data[key]);
+                    if (key !== '__fotoIndexedDB') {
+                        localStorage.setItem(key, data[key]);
+                    }
                 }
-                alert('Restore berhasil! Halaman akan dimuat ulang.');
-                location.reload();
+                // Restore foto ke IndexedDB jika ada
+                if (data.__fotoIndexedDB && window.idbSetFoto) {
+                    const fotoObj = data.__fotoIndexedDB;
+                    const fotoKeys = Object.keys(fotoObj);
+                    let setPromises = fotoKeys.map(k => idbSetFoto(k, fotoObj[k]));
+                    Promise.all(setPromises).then(() => {
+                        alert('Restore berhasil! Halaman akan dimuat ulang.');
+                        location.reload();
+                    });
+                } else {
+                    alert('Restore berhasil! Halaman akan dimuat ulang.');
+                    location.reload();
+                }
             }
         } catch (err) {
             alert('File backup tidak valid!');
@@ -297,10 +342,24 @@ document.addEventListener('DOMContentLoaded', function() {
     updatePeriode();
 
     // ===================== INISIALISASI BARIS AWAL =====================
+    // Cari jumlah baris maksimum dari data yang ada di localStorage
     let jumlahBarisLokal = parseInt(localStorage.getItem('jumlahBaris')) || 1;
-    for (let i = 1; i <= jumlahBarisLokal; i++) {
+    let maxBaris = jumlahBarisLokal;
+    // Cek key foto di localStorage, jika ada key img_like_X, img_comen_X, img_share_X dengan X lebih besar, update maxBaris
+    Object.keys(localStorage).forEach(function(key) {
+        let match = key.match(/^img_(like|comen|share)_(\d+)$/);
+        if (match) {
+            let idx = parseInt(match[2]);
+            if (idx > maxBaris) maxBaris = idx;
+        }
+    });
+    // Render baris sesuai maxBaris
+    for (let i = 1; i <= maxBaris; i++) {
         tbody.appendChild(renderBarisHTML(i));
     }
+    // Update jumlahBaris global dan di localStorage
+    jumlahBaris = maxBaris;
+    localStorage.setItem('jumlahBaris', maxBaris);
     if (typeof muatDataLokal === 'function') {
         muatDataLokal();
     }
@@ -330,12 +389,7 @@ function simpanSemuaData() {
         var judul = document.getElementById(`judul_${i}`);
         if (tgl) localStorage.setItem(`tgl_${i}`, tgl.value);
         if (judul) localStorage.setItem(`judul_${i}`, judul.value);
-        ['like', 'comen', 'share'].forEach(type => {
-            var img = document.getElementById(`img_${type}_${i}`);
-            if (img && img.src && img.src.startsWith('data:')) {
-                localStorage.setItem(`img_${type}_${i}`, img.src);
-            }
-        });
+        // Foto sekarang hanya disimpan di IndexedDB lewat prosesGambar
     }
     localStorage.setItem('jumlahBaris', jumlahBaris);
     alert('Data berhasil disimpan!');
@@ -384,9 +438,11 @@ function hapusBaris() {
             }
             localStorage.removeItem(`tgl_${jumlahBaris}`);
             localStorage.removeItem(`judul_${jumlahBaris}`);
-            localStorage.removeItem(`img_like_${jumlahBaris}`);
-            localStorage.removeItem(`img_comen_${jumlahBaris}`);
-            localStorage.removeItem(`img_share_${jumlahBaris}`);
+            // Hapus foto dari IndexedDB
+            ['like', 'comen', 'share'].forEach(type => {
+                const key = `img_${type}_${jumlahBaris}`;
+                idbDeleteFoto(key);
+            });
             jumlahBaris--;
             localStorage.setItem('jumlahBaris', jumlahBaris);
         }
@@ -449,9 +505,8 @@ function prosesGambar(input, imgId, textId) {
             document.getElementById(imgId).src = e.target.result;
             document.getElementById(imgId).style.display = 'block';
             document.getElementById(textId).style.display = 'none';
-            try { 
-                localStorage.setItem(imgId, e.target.result); 
-            } catch (err) {}
+            // Simpan ke IndexedDB, bukan localStorage
+            idbSetFoto(imgId, e.target.result).catch(() => {});
         }
         reader.readAsDataURL(input.files[0]);
     }
@@ -529,11 +584,13 @@ function muatDataLokal() {
         }
         ['like', 'comen', 'share'].forEach(type => {
             const key = `img_${type}_${i}`;
-            if (localStorage.getItem(key)) {
-                document.getElementById(key).src = localStorage.getItem(key);
-                document.getElementById(key).style.display = 'block';
-                document.getElementById(`txt_${type}_${i}`).style.display = 'none';
-            }
+            idbGetFoto(key).then(result => {
+                if (result) {
+                    document.getElementById(key).src = result;
+                    document.getElementById(key).style.display = 'block';
+                    document.getElementById(`txt_${type}_${i}`).style.display = 'none';
+                }
+            });
         });
     }
 }
@@ -542,8 +599,22 @@ function muatDataLokal() {
 function resetData() { 
     if(confirm("Hapus semua data?")) { 
         localStorage.clear(); 
-        location.reload(); 
-    } 
+        // Hapus semua foto di IndexedDB
+        if (window.idbGetAllFotoKeys && window.idbDeleteFoto) {
+            idbGetAllFotoKeys().then(keys => {
+                if (Array.isArray(keys)) {
+                    let delPromises = keys.map(k => idbDeleteFoto(k));
+                    Promise.all(delPromises).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    location.reload();
+                }
+            }).catch(() => location.reload());
+        } else {
+            location.reload();
+        }
+    }
 }
     </script>
 
