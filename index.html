@@ -10,7 +10,38 @@
         <script src="indexeddb-helper.js"></script>
         <!-- Library docx.js dari CDN -->
         <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+
         <script src="docx-exporter-modern.js"></script>
+        <!-- Auto-resize font for judul kolom -->
+        <script>
+        function fitTextToWidth(element, minFont = 8, maxFont = 14) {
+            const parent = element.parentElement;
+            if (!parent) return;
+            let fontSize = maxFont;
+            element.style.fontSize = fontSize + 'pt';
+            let scrollW = element.scrollWidth;
+            let clientW = parent.clientWidth;
+            while (scrollW > clientW && fontSize > minFont) {
+                fontSize -= 0.5;
+                element.style.fontSize = fontSize + 'pt';
+                scrollW = element.scrollWidth;
+                clientW = parent.clientWidth;
+            }
+        }
+        function autoResizeAllJudul() {
+            document.querySelectorAll('textarea.input-judul').forEach(el => {
+                fitTextToWidth(el, 8, 14);
+            });
+        }
+        window.addEventListener('DOMContentLoaded', autoResizeAllJudul);
+        window.addEventListener('resize', autoResizeAllJudul);
+        // Jika ada perubahan pada judul, resize juga
+        document.addEventListener('input', function(e) {
+            if (e.target && e.target.matches('textarea.input-judul')) {
+                fitTextToWidth(e.target, 8, 14);
+            }
+        });
+        </script>
 
         <!-- ===================== STYLE (CSS) ===================== -->
         <style>
@@ -85,6 +116,17 @@
         
         .col-no { width: 110px; }
         .col-judul { width: 180px; }
+        /* Responsive font size for long content titles */
+        .judul-wrapper, .col-judul, .input-judul {
+            font-size: clamp(8pt, 2vw, 12pt) !important;
+            word-break: break-word !important;
+            line-height: 1.2 !important;
+        }
+        /* Auto shrink font for textarea judul if overflow */
+        textarea.input-judul {
+            font-size: clamp(8pt, 2vw, 12pt) !important;
+            max-height: 100% !important;
+        }
         .td-no { text-align: center; height: 190px; vertical-align: middle; }
         
         .input-tgl { width: 100% !important; height: 100% !important; border: none !important; text-align: center !important; font-weight: normal !important; font-size: 10pt !important; background: transparent !important; outline: none !important; font-family: Arial, sans-serif !important; color: #000 !important; padding: 0 !important; margin: 0 !important; line-height: normal !important; box-sizing: border-box !important; }
