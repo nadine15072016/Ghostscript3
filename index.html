@@ -88,8 +88,8 @@
         .td-no { text-align: center; height: 190px; vertical-align: middle; }
         
         .input-tgl { width: 100% !important; height: 100% !important; border: none !important; text-align: center !important; font-weight: normal !important; font-size: 10pt !important; background: transparent !important; outline: none !important; font-family: Arial, sans-serif !important; color: #000 !important; padding: 0 !important; margin: 0 !important; line-height: normal !important; box-sizing: border-box !important; }
-        .judul-wrapper { display: flex !important; align-items: center !important; justify-content: flex-start !important; height: 190px !important; padding: 0 10px !important; box-sizing: border-box !important; margin: 0 !important; }
-        textarea.input-judul { width: 100% !important; height: 90px !important; border: none !important; resize: none !important; font-family: Arial, sans-serif !important; font-size: 10pt !important; background: transparent !important; outline: none !important; overflow: hidden !important; line-height: 1.3 !important; padding: 0 !important; margin: 0 !important; box-sizing: border-box !important; }
+        .judul-wrapper { display: flex !important; align-items: flex-start !important; justify-content: flex-start !important; height: 190px !important; padding: 0 10px !important; box-sizing: border-box !important; margin: 0 !important; }
+        textarea.input-judul { width: 100% !important; height: 100% !important; min-height: 40px !important; border: none !important; resize: none !important; font-family: Arial, sans-serif !important; font-size: 10pt !important; background: transparent !important; outline: none !important; overflow: hidden !important; line-height: 1.5 !important; padding: 0 8px !important; margin: 0 !important; box-sizing: border-box !important; text-align: left !important; text-justify: auto !important; display: block !important; align-items: flex-start !important; justify-content: flex-start !important; }
         
         .foto-container { border-radius: 4px; width: 100px; height: 180px; border: 1px dashed #ccc; margin: 5px auto; position: relative; background-color: #f4f4f4; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .img-preview { width: 100%; height: 100%; object-fit: fill; display: none; }
@@ -153,7 +153,7 @@
 
         @media print {
             html, body { height: auto; overflow: visible; }
-            .toolbar, #header, #footer, .sidebar, .comments, .action-buttons, #filter-bar, #pagination-bar, #jumlah-data-eviden { display: none !important; }
+            .toolbar, #header, #footer, .sidebar, .comments, .action-buttons, #filter-bar, #pagination-bar, #jumlah-data-eviden, .btn-hapus-baris { display: none !important; }
             .kertas-a4 { width: 210mm !important; min-height: 297mm !important; height: auto !important; padding: 10mm 20mm !important; margin: 0 !important; border: none !important; box-shadow: none !important; page-break-after: avoid !important; overflow: visible !important; }
             .judul-laporan { width: 110% !important; margin: 0 -5% 15px -5% !important; line-height: 1.1 !important; font-size: 13pt !important; }
             .identitas { margin-top: 40px; margin-bottom: 25px !important; }
@@ -178,6 +178,41 @@
                     navigator.serviceWorker.register('service-worker.js');
                 });
             }
+
+            // --- Solusi proporsional judul konten ---
+            function autoFontResizeJudul(textarea) {
+                const minFont = 8; // pt
+                let fontSize = 10;
+                textarea.style.fontSize = fontSize + 'pt';
+                textarea.style.overflow = 'hidden';
+                textarea.style.resize = 'none';
+                // Ubah tinggi textarea agar selalu 100% dari wrapper
+                let wrapper = textarea.closest('.judul-wrapper');
+                if (wrapper) {
+                    textarea.style.height = wrapper.offsetHeight + 'px';
+                }
+                // Kecilkan font jika overflow
+                while (textarea.scrollHeight > textarea.clientHeight && fontSize > minFont) {
+                    fontSize -= 0.5;
+                    textarea.style.fontSize = fontSize + 'pt';
+                }
+                // Jika tetap overflow, tampilkan tooltip
+                if (textarea.scrollHeight > textarea.clientHeight) {
+                    textarea.title = textarea.value;
+                } else {
+                    textarea.title = '';
+                }
+            }
+            function applyAutoFontResizeAllJudul() {
+                document.querySelectorAll('textarea.input-judul').forEach(autoFontResizeJudul);
+            }
+            document.addEventListener('input', function(e) {
+                if (e.target.classList.contains('input-judul')) {
+                    autoFontResizeJudul(e.target);
+                }
+            });
+            window.addEventListener('resize', applyAutoFontResizeAllJudul);
+            document.addEventListener('DOMContentLoaded', applyAutoFontResizeAllJudul);
         </script>
         <style>
         #info-createby {
@@ -266,35 +301,7 @@
 </div>
 <div class="kertas-a4" id="kertas-a4">
         <!-- ===================== FILTER & SEARCH ===================== -->
-        <div id="filter-bar" style="margin: 0 0 18px 0; display: flex; gap: 10px; justify-content: flex-start; align-items: center;">
-            <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; width: 100%;">
-                <input type="date" id="filter-tanggal" placeholder="Tanggal" style="padding:4px 6px; font-size:11px; width:120px; border-radius:4px; border:1px solid #ccc;">
-                <span style="font-size:11px;">s/d</span>
-                <input type="date" id="filter-tanggal-akhir" placeholder="Tanggal Akhir" style="padding:4px 6px; font-size:11px; width:120px; border-radius:4px; border:1px solid #ccc;">
-                <input type="text" id="filter-judul" placeholder="Judul Konten" style="padding:4px 6px; font-size:11px; width:110px; border-radius:4px; border:1px solid #ccc;">
-                <input type="text" id="filter-wilayah" placeholder="Wilayah" style="padding:4px 6px; font-size:11px; width:100px; border-radius:4px; border:1px solid #ccc;">
-                <select id="filter-bulan" style="padding:4px 6px; font-size:11px; width:85px; border-radius:4px; border:1px solid #ccc;">
-                    <option value="">Bulan</option>
-                    <option value="01">Januari</option>
-                    <option value="02">Februari</option>
-                    <option value="03">Maret</option>
-                    <option value="04">April</option>
-                    <option value="05">Mei</option>
-                    <option value="06">Juni</option>
-                    <option value="07">Juli</option>
-                    <option value="08">Agustus</option>
-                    <option value="09">September</option>
-                    <option value="10">Oktober</option>
-                    <option value="11">November</option>
-                    <option value="12">Desember</option>
-                </select>
-                <select id="filter-tahun" style="padding:4px 6px; font-size:11px; width:65px; border-radius:4px; border:1px solid #ccc;"></select>
-                <button onclick="applyFilter()" style="padding:4px 10px; font-size:11px; background:#007bff; color:white; border:none; border-radius:4px;">Filter</button>
-                <button onclick="resetFilter()" style="padding:4px 10px; font-size:11px; background:#6c757d; color:white; border:none; border-radius:4px;">Reset</button>
-                <button onclick="tampilkanSemuaEviden()" style="padding:4px 10px; font-size:11px; background:#198754; color:white; border:none; border-radius:4px;">Semua Eviden</button>
-            </div>
-        </div>
-
+        <!-- (Bagian filter dihapus) -->
         <!-- PAGINATION DIHILANGKAN -->
         <div id="pagination-bar" style="display:none"></div>
     <!-- Judul Laporan -->
@@ -338,7 +345,7 @@
                 <tr>
                     <td class="label-id">NIP.</td>
                     <td class="titik-id">:</td>
-                    <td><input type="text" id="id_nip" placeholder="Contoh : 19920203 2025XX X XXX" maxlength="21" oninput="formatNIP(this); simpanTeks('id_nip')"></td>
+                    <td><input type="text" id="id_nip" placeholder="Contoh : 19920203 2025XX X XXX" oninput="simpanTeks('id_nip')"></td>
                 </tr>
                 <tr>
                     <td class="label-id">WILAYAH BINAAN</td>
@@ -353,7 +360,14 @@
 
     <!-- Tabel Eviden -->
     <section id="tabel-eviden">
-        <div id="jumlah-data-eviden" style="margin-bottom:8px;font-weight:bold;color:#198754;"></div>
+        <div style="display:flex;align-items:center;gap:18px;margin-bottom:8px;">
+            <div id="jumlah-data-eviden" style="font-weight:bold;color:#198754;"></div>
+            <label style="font-size:14px;cursor:pointer;user-select:none;">
+                <label style="font-size:14px;cursor:pointer;user-select:none;display:none;">
+                    <input type="checkbox" id="filter-tanpa-tanggal" style="vertical-align:middle;margin-right:4px;"> Tampilkan hanya baris tanpa tanggal
+                </label>
+            </label>
+        </div>
         <table class="tabel-data">
             <thead>
                 <tr>
@@ -623,6 +637,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (bulanSelect) {
         let bulanArr = Array.from(bulanSet).sort();
         bulanSelect.innerHTML = '';
+        // Opsi Tanpa Tanggal
+        let optTanpaTgl = document.createElement('option');
+        optTanpaTgl.value = '__tanpa_tanggal__';
+        optTanpaTgl.text = 'Tanpa Tanggal';
+        bulanSelect.appendChild(optTanpaTgl);
         bulanArr.forEach(b => {
             let namaBulan = '';
             switch(b) {
@@ -820,25 +839,105 @@ function resetFilter() {
 
 function renderFilteredTable(dataArr) {
     tbody.innerHTML = '';
-    // Urutkan dataArr berdasarkan tanggal (ascending, kosong di akhir)
-    dataArr = dataArr.slice().sort((a, b) => {
+    // Ambil status filter
+    const filterTanpaTanggal = document.getElementById('filter-tanpa-tanggal');
+    let allRows = evidenDataCache.slice();
+    // Filter berdasarkan periode bulan/tahun yang dipilih
+    const bulanSelect = document.getElementById('periode_bulan');
+    const tahunSelect = document.getElementById('periode_tahun');
+    let bulanVal = bulanSelect ? bulanSelect.value : '';
+    let tahunVal = tahunSelect ? tahunSelect.value : '';
+    // Konversi nama bulan ke angka
+    const bulanMap = { 'Januari':'01','Februari':'02','Maret':'03','April':'04','Mei':'05','Juni':'06','Juli':'07','Agustus':'08','September':'09','Oktober':'10','November':'11','Desember':'12' };
+    let bulanNum = bulanMap[bulanVal] || '';
+    if (bulanVal === '__tanpa_tanggal__') {
+        allRows = allRows.filter(row => !row.tanggal || row.tanggal.trim() === '');
+    } else if (bulanNum || tahunVal) {
+        allRows = allRows.filter(row => {
+            if (!row.tanggal) return false;
+            const [tahun, bulan] = row.tanggal.split('-');
+            let match = true;
+            if (bulanNum && bulan !== bulanNum) match = false;
+            if (tahunVal && tahun !== tahunVal) match = false;
+            return match;
+        });
+    }
+    if (filterTanpaTanggal && filterTanpaTanggal.checked) {
+        allRows = allRows.filter(row => !row.tanggal || row.tanggal.trim() === '');
+    }
+    // Urutkan: tanggal terisi dulu, lalu kosong, dalam bulan urut tanggal
+    allRows = allRows.sort((a, b) => {
         if (!a.tanggal && !b.tanggal) return 0;
         if (!a.tanggal) return 1;
         if (!b.tanggal) return -1;
+        // Urutkan berdasarkan tahun-bulan-tanggal
         return a.tanggal.localeCompare(b.tanggal);
     });
-    const total = dataArr.length;
+    // Kelompokkan berdasarkan bulan-tahun
+    let kelompok = {};
+    allRows.forEach(row => {
+        let key = 'Tanpa Tanggal';
+        if (row.tanggal && row.tanggal.length >= 7) {
+            const [tahun, bulan] = row.tanggal.split('-');
+            key = `${bulan}-${tahun}`;
+        }
+        if (!kelompok[key]) kelompok[key] = [];
+        kelompok[key].push(row);
+    });
     // Tampilkan jumlah data eviden
     const jumlahDiv = document.getElementById('jumlah-data-eviden');
+    let total = allRows.length;
     if (jumlahDiv) {
         jumlahDiv.textContent = `Jumlah data eviden: ${total}`;
     }
-    for (let i = 0; i < total; i++) {
-        tbody.appendChild(renderBarisHTML(dataArr[i].idx));
-    }
+    // Render per kelompok bulan
+    Object.keys(kelompok).sort((a, b) => {
+        if (a === 'Tanpa Tanggal') return 1;
+        if (b === 'Tanpa Tanggal') return -1;
+        // Urutkan bulan-tahun
+        const [ba, ta] = a.split('-');
+        const [bb, tb] = b.split('-');
+        if (ta !== tb) return ta.localeCompare(tb);
+        return ba.localeCompare(bb);
+    }).forEach(key => {
+        // Header bulan
+        if (key !== 'Tanpa Tanggal') {
+            const namaBulan = {
+                '01':'Januari','02':'Februari','03':'Maret','04':'April','05':'Mei','06':'Juni','07':'Juli','08':'Agustus','09':'September','10':'Oktober','11':'November','12':'Desember'
+            }[key.split('-')[0]] || key.split('-')[0];
+            const tahun = key.split('-')[1];
+            const trHeader = document.createElement('tr');
+            trHeader.style.background = '#e9ecef';
+            trHeader.innerHTML = `<td colspan="5" style="font-weight:bold;font-size:15px;padding:8px 0 8px 8px;">${namaBulan} ${tahun}</td>`;
+            tbody.appendChild(trHeader);
+        } else {
+            const trHeader = document.createElement('tr');
+            trHeader.style.background = '#fff3cd';
+            trHeader.innerHTML = `<td colspan="5" style="font-weight:bold;font-size:15px;padding:8px 0 8px 8px;color:#856404;">Tanpa Tanggal</td>`;
+            tbody.appendChild(trHeader);
+        }
+        // Render baris per kelompok
+        kelompok[key].forEach(row => {
+            const tr = renderBarisHTML(row.idx);
+            // Highlight baris tanpa tanggal
+            if (!row.tanggal) {
+                tr.style.background = '#fff3cd';
+                tr.style.border = '2px solid #ffeeba';
+                tr.title = 'Baris ini belum memiliki tanggal';
+                setTimeout(() => {
+                    const tglInput = tr.querySelector('.input-tgl');
+                    if (tglInput && !tglInput.value) {
+                        tglInput.style.background = '#ffeeba';
+                        tglInput.placeholder = 'Tanggal kosong!';
+                    }
+                }, 0);
+            }
+            tbody.appendChild(tr);
+        });
+    });
     // Muat data lokal untuk baris yang dirender saja
     for (let i = 0; i < total; i++) {
-        const idx = dataArr[i].idx;
+        const idx = allRows[i].idx;
         const tEl = document.getElementById(`tgl_${idx}`);
         if(localStorage.getItem(`tgl_${idx}`)) {
             tEl.value = localStorage.getItem(`tgl_${idx}`);
@@ -857,6 +956,28 @@ function renderFilteredTable(dataArr) {
             });
         });
     }
+    // Event: filter baris tanpa tanggal
+    document.addEventListener('DOMContentLoaded', function() {
+        const filterTanpaTanggal = document.getElementById('filter-tanpa-tanggal');
+        if (filterTanpaTanggal) {
+            filterTanpaTanggal.checked = false;
+            filterTanpaTanggal.addEventListener('change', function() {
+                renderFilteredTable(evidenDataCache);
+            });
+            renderFilteredTable(evidenDataCache);
+        } else {
+            renderFilteredTable(evidenDataCache);
+        }
+    });
+    // Event: filter baris tanpa tanggal
+    document.addEventListener('DOMContentLoaded', function() {
+        const filterTanpaTanggal = document.getElementById('filter-tanpa-tanggal');
+        if (filterTanpaTanggal) {
+            filterTanpaTanggal.addEventListener('change', function() {
+                renderFilteredTable(evidenDataCache);
+            });
+        }
+    });
     // Pagination dihilangkan, tidak perlu renderPaginationBar
 }
 
@@ -879,21 +1000,71 @@ function updatePeriode() {
 
 // ===================== FUNGSI UTAMA DATA EVIDEN =====================
 function simpanSemuaData() {
-    // Simpan identitas
-    ['id_periode', 'id_nama', 'id_nip', 'id_wilayah'].forEach(id => {
-        var el = document.getElementById(id);
-        if (el) localStorage.setItem(id, el.value);
-    });
-    // Simpan data baris
-    for (let i = 1; i <= jumlahBaris; i++) {
-        var tgl = document.getElementById(`tgl_${i}`);
-        var judul = document.getElementById(`judul_${i}`);
-        if (tgl) localStorage.setItem(`tgl_${i}`, tgl.value);
-        if (judul) localStorage.setItem(`judul_${i}`, judul.value);
-        // Foto sekarang hanya disimpan di IndexedDB lewat prosesGambar
+    try {
+        // Validasi input identitas
+        let valid = true;
+        let missing = [];
+        ['id_periode', 'id_nama', 'id_nip', 'id_wilayah'].forEach(id => {
+            var el = document.getElementById(id);
+            if (!el || !el.value) {
+                valid = false;
+                missing.push(id);
+            }
+        });
+        if (!valid) {
+            alert('Data identitas belum lengkap: ' + missing.join(', '));
+            return;
+        }
+        // Simpan identitas
+        ['id_periode', 'id_nama', 'id_nip', 'id_wilayah'].forEach(id => {
+            var el = document.getElementById(id);
+            localStorage.setItem(id, el.value);
+        });
+        // Simpan data baris HANYA untuk baris yang tampil di tabel (berdasarkan periode/filter)
+        const barisTampil = Array.from(document.querySelectorAll('#table-body tr')).filter(tr => {
+            const tgl = tr.querySelector('.input-tgl');
+            const judul = tr.querySelector('.input-judul');
+            // Hanya validasi baris yang memiliki input judul dan input tanggal
+            return tgl && judul;
+        });
+        for (let k = 0; k < barisTampil.length; k++) {
+            const tr = barisTampil[k];
+            const tgl = tr.querySelector('.input-tgl');
+            const judul = tr.querySelector('.input-judul');
+            const idx = tr.id.replace('baris_', '');
+            // Reset error style dan pesan
+            tr.querySelectorAll('.error-msg').forEach(e => e.remove());
+            if (judul) judul.style.background = '';
+            // Validasi hanya jika input judul dan tanggal ada di baris
+            if (tgl && !tgl.value) {
+                tgl.style.background = '#ffeeba';
+                valid = false;
+                break;
+            }
+            if (judul && !judul.value) {
+                judul.style.background = '#ffcccc';
+                // Tambahkan pesan error di bawah input judul
+                const msg = document.createElement('div');
+                msg.className = 'error-msg';
+                msg.style.color = '#c0392b';
+                msg.style.fontSize = '12px';
+                msg.style.marginTop = '4px';
+                msg.textContent = 'Isi Judul Kolom Untuk Menyimpan !!!';
+                judul.parentNode.appendChild(msg);
+                valid = false;
+                break;
+            }
+            localStorage.setItem(`tgl_${idx}`, tgl.value);
+            localStorage.setItem(`judul_${idx}`, judul.value);
+            // Foto sekarang hanya disimpan di IndexedDB lewat prosesGambar
+        }
+        if (!valid) return;
+        localStorage.setItem('jumlahBaris', jumlahBaris);
+        alert('Data berhasil disimpan!');
+    } catch (err) {
+        alert('Terjadi error saat menyimpan data!\n' + (err && err.message ? err.message : err));
+        console.error('Error simpanSemuaData:', err);
     }
-    localStorage.setItem('jumlahBaris', jumlahBaris);
-    alert('Data berhasil disimpan!');
 }
 
 function tambahBaris() {
@@ -957,8 +1128,11 @@ function renderBarisHTML(i) {
     const tr = document.createElement('tr');
     tr.id = `baris_${i}`;
     tr.innerHTML = `
-        <td class="td-no">
-            <input type="date" id="tgl_${i}" class="input-tgl" oninput="sinkronisasiTanggal(this)">
+        <td class="td-no" style="vertical-align:middle;">
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:120px;">
+                <input type="date" id="tgl_${i}" class="input-tgl" oninput="sinkronisasiTanggal(this)" style="margin-bottom:8px;text-align:center;">
+                <button type="button" class="btn-hapus-baris" style="padding:4px 10px;font-size:12px;background:#e74c3c;color:#fff;border:none;border-radius:5px;cursor:pointer;width:110px;" onclick="window.hapusBarisTanggal(${i})">Hapus Baris</button>
+            </div>
         </td>
         <td class="td-judul">
             <div class="judul-wrapper">
@@ -990,6 +1164,25 @@ function renderBarisHTML(i) {
     return tr;
 }
 
+// Fungsi hapus baris berdasarkan tanggal yang dipilih (global agar bisa diakses dari HTML)
+window.hapusBarisTanggal = function hapusBarisTanggal(idx) {
+    if (jumlahBaris <= 1) {
+        alert('Minimal harus ada 1 baris eviden.');
+        return;
+    }
+    if(confirm('Hapus baris ini? Data dan foto akan dihapus.')) {
+        localStorage.removeItem(`tgl_${idx}`);
+        localStorage.removeItem(`judul_${idx}`);
+        ['like', 'comen', 'share'].forEach(type => {
+            if (window.idbDeleteFoto) idbDeleteFoto(`img_${type}_${idx}`);
+        });
+        evidenDataCache = evidenDataCache.filter(row => row.idx != idx);
+        jumlahBaris = evidenDataCache.length;
+        localStorage.setItem('jumlahBaris', jumlahBaris);
+        renderFilteredTable(evidenDataCache);
+    }
+}
+
 function cetakPDFCustom() {
     window.print();
 }
@@ -1007,7 +1200,9 @@ function prosesGambar(input, imgId, textId) {
             document.getElementById(imgId).style.display = 'block';
             document.getElementById(textId).style.display = 'none';
             // Simpan ke IndexedDB, bukan localStorage
-            idbSetFoto(imgId, e.target.result).catch(() => {});
+            idbSetFoto(imgId, e.target.result).catch((err) => {
+                alert('Gagal menyimpan foto ke IndexedDB!\nKemungkinan kuota penyimpanan penuh atau browser membatasi akses.\nError: ' + (err && err.message ? err.message : err));
+            });
         }
         reader.readAsDataURL(input.files[0]);
     }
@@ -1038,16 +1233,7 @@ function formatAlamat(input) {
 }
 
 function formatNIP(input) {
-    let value = input.value.replace(/\D/g, '');
-    if (value.length > 18) {
-        value = value.substr(0, 18);
-    }
-    let formatted = '';
-    if (value.length > 0) formatted += value.substr(0, 8);
-    if (value.length > 8) formatted += ' ' + value.substr(8, 6);
-    if (value.length > 14) formatted += ' ' + value.substr(14, 1);
-    if (value.length > 15) formatted += ' ' + value.substr(15, 3);
-    input.value = formatted;
+    // Fungsi formatNIP dihapus, input NIP sekarang bebas karakter
 }
 
 // ===================== FUNGSI MUAT DATA LOKAL =====================
@@ -1131,9 +1317,132 @@ function resetData() {
 </div>
 </div></div>
 </div>
-</main>
-</div>
-<script type="text/javascript">
+
+<script>
+function tampilkanFotoTanpaTanggal() {
+    if (!window.idbGetAllFotoKeys || !window.idbGetFoto) {
+        alert('Fitur tidak didukung di browser ini.');
+        return;
+    }
+    idbGetAllFotoKeys().then(keys => {
+        const fotoPromises = keys.map(k => idbGetFoto(k).then(val => [k, val]));
+        Promise.all(fotoPromises).then(fotoArr => {
+            // Ambil semua index foto (like, comen, share) dan cek tanggalnya di localStorage
+            const fotoTanpaTanggal = [];
+            fotoArr.forEach(([k, v]) => {
+                // k: img_like_1, img_comen_2, dst
+                const match = k.match(/img_\w+_(\d+)/);
+                if (match) {
+                    const idx = match[1];
+                    const tgl = localStorage.getItem(`tgl_${idx}`);
+                    if (!tgl) {
+                        fotoTanpaTanggal.push({ key: k, src: v, idx });
+                    }
+                }
+            });
+            // Tampilkan hasil di modal sederhana
+            let html = '<div style="max-height:400px;overflow:auto">';
+            if (fotoTanpaTanggal.length === 0) {
+                html += '<p>Tidak ada foto tanpa tanggal.</p>';
+            } else {
+                html += '<b>Daftar Foto Tanpa Tanggal:</b><br><br>';
+                fotoTanpaTanggal.forEach(f => {
+                    html += `<div style='margin-bottom:12px;border:1px solid #ccc;padding:8px;border-radius:6px;'>`
+                        + `<b>ID Baris:</b> ${f.idx} <br>`
+                        + `<b>Key:</b> ${f.key} <br>`
+                        + `<img src='${f.src}' style='max-width:120px;max-height:120px;display:block;margin-top:6px;'>`
+                        + `</div>`;
+                });
+            }
+            html += '</div>';
+            // Modal sederhana
+            const modal = document.createElement('div');
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.background = 'rgba(0,0,0,0.4)';
+            modal.style.zIndex = '99999';
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            const inner = document.createElement('div');
+            inner.style.background = '#fff';
+            inner.style.padding = '24px';
+            inner.style.borderRadius = '10px';
+            inner.style.maxWidth = '90vw';
+            inner.style.maxHeight = '90vh';
+            inner.innerHTML = html + '<br>';
+            const btnTutup = document.createElement('button');
+            btnTutup.textContent = 'Tutup';
+            btnTutup.style.marginTop = '10px';
+            btnTutup.style.padding = '8px 18px';
+            btnTutup.style.fontSize = '15px';
+            btnTutup.onclick = function() {
+                document.body.removeChild(modal);
+            };
+            inner.appendChild(btnTutup);
+            modal.appendChild(inner);
+            document.body.appendChild(modal);
+        });
+    });
+}
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Tidak ada panel baris tanpa tanggal dan tombol foto tanpa tanggal
+});
+
+// Fitur: tampilkan baris eviden tanpa tanggal
+function tampilkanBarisTanpaTanggal() {
+    // evidenDataCache sudah berisi data baris eviden
+    const tanpaTanggal = evidenDataCache.filter(row => !row.tanggal || row.tanggal.trim() === '');
+    let html = '<div style="max-height:400px;overflow:auto">';
+    if (tanpaTanggal.length === 0) {
+        html += '<p>Tidak ada baris tanpa tanggal.</p>';
+    } else {
+        html += '<b>Daftar Baris Tanpa Tanggal:</b><br><br>';
+        tanpaTanggal.forEach(row => {
+            html += `<div style='margin-bottom:12px;border:1px solid #ccc;padding:8px;border-radius:6px;'>`
+                + `<b>ID Baris:</b> ${row.idx} <br>`
+                + `<b>Judul:</b> ${row.judul || '-'} <br>`
+                + `<b>Wilayah:</b> ${row.wilayah || '-'} <br>`
+                + `</div>`;
+        });
+    }
+    html += '</div>';
+    // Modal sederhana
+    const modal = document.createElement('div');
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100vw';
+    modal.style.height = '100vh';
+    modal.style.background = 'rgba(0,0,0,0.4)';
+    modal.style.zIndex = '99999';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    const inner = document.createElement('div');
+    inner.style.background = '#fff';
+    inner.style.padding = '24px';
+    inner.style.borderRadius = '10px';
+    inner.style.maxWidth = '90vw';
+    inner.style.maxHeight = '90vh';
+    inner.innerHTML = html + '<br>';
+    const btnTutup = document.createElement('button');
+    btnTutup.textContent = 'Tutup';
+    btnTutup.style.marginTop = '10px';
+    btnTutup.style.padding = '8px 18px';
+    btnTutup.style.fontSize = '15px';
+    btnTutup.onclick = function() {
+        document.body.removeChild(modal);
+    };
+    inner.appendChild(btnTutup);
+    modal.appendChild(inner);
+    document.body.appendChild(modal);
+}
 </script>
 </body>
 </html>
