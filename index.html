@@ -681,6 +681,18 @@ async function backupData() {
             }
         }
         
+        showLoading('Membackup data...', 'Mengambil data identitas...');
+        
+        // Ambil data identitas dari localStorage
+        const identitasData = {};
+        const identitasKeys = ['id_periode', 'id_nama', 'id_nip', 'id_wilayah'];
+        identitasKeys.forEach(key => {
+            const value = localStorage.getItem(key);
+            if (value) {
+                identitasData[key] = value;
+            }
+        });
+        
         showLoading('Membackup data...', 'Mengambil foto dari IndexedDB...');
         
         // Ambil SEMUA foto dari IndexedDB store 'foto'
@@ -700,8 +712,9 @@ async function backupData() {
         // Gabungkan data dan foto dengan metadata
         const backupData = {
             __dataIndexedDB: dataObj,
+            __identitasLocalStorage: identitasData,
             __fotoIndexedDB: fotoObj,
-            __backupVersion: 2,
+            __backupVersion: 3,
             __backupDate: new Date().toISOString()
         };
         
@@ -779,13 +792,35 @@ async function restoreData(event) {
                 }
             } else {
                 // Format lama (localStorage backup) - fallback compatibility
-                const backupKeys = Object.keys(backup).filter(k => !['__fotoIndexedDB', '__backupVersion', '__backupDate'].includes(k));
+                const backupKeys = Object.keys(backup).filter(k => !['__fotoIndexedDB', '__identitasLocalStorage', '__backupVersion', '__backupDate'].includes(k));
                 for (let i = 0; i < backupKeys.length; i++) {
                     const key = backupKeys[i];
                     showLoading('Memulihkan data...', `Mengimpor data ${i + 1} dari ${backupKeys.length}...`);
                     await idbSetData(key, backup[key]);
                     dataCount++;
                 }
+            }
+            
+            showLoading('Memulihkan data...', 'Mengimpor data identitas...');
+            
+            // Restore data identitas ke localStorage
+            let identitasRestored = false;
+            if (backup.__identitasLocalStorage) {
+                // Format baru (backup version 3+)
+                const identitasKeys = Object.keys(backup.__identitasLocalStorage);
+                identitasKeys.forEach(key => {
+                    localStorage.setItem(key, backup.__identitasLocalStorage[key]);
+                });
+                identitasRestored = true;
+            } else {
+                // Coba restore dari format lama (jika ada di root level)
+                const identitasKeys = ['id_periode', 'id_nama', 'id_nip', 'id_wilayah'];
+                identitasKeys.forEach(key => {
+                    if (backup[key]) {
+                        localStorage.setItem(key, backup[key]);
+                        identitasRestored = true;
+                    }
+                });
             }
             
             showLoading('Memulihkan data...', 'Mengimpor foto...');
@@ -802,7 +837,14 @@ async function restoreData(event) {
             }
             
             hideLoading();
-            alert('✅ Restore berhasil!\n\nData: ' + dataCount + '\nFoto: ' + fotoCount + '\n\nHalaman akan dimuat ulang.');
+            
+            let alertMsg = '✅ Restore berhasil!\n\nData: ' + dataCount + '\nFoto: ' + fotoCount;
+            if (!identitasRestored) {
+                alertMsg += '\n\n⚠️ PERHATIAN:\nFile backup ini tidak berisi data identitas (Nama, NIP, Wilayah Binaan).\n\nSilakan input ulang data identitas Anda setelah halaman dimuat ulang.';
+            }
+            alertMsg += '\n\nHalaman akan dimuat ulang.';
+            
+            alert(alertMsg);
             location.reload();
             
         } catch (err) {
@@ -941,21 +983,23 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         }
     }
-    updatePeriode();
     
     // Update variabel global jumlahBaris
     jumlahBaris = maxBaris;
+    
+    // Load data ke input form DULU sebelum yang lain (PENTING!)
+    if (typeof muatDataLokal === 'function') {
+        await muatDataLokal();
+    }
+    
+    // Baru update periode setelah data identitas di-load
+    updatePeriode();
     
     // Tampilkan data sesuai periode default
     if (bulanSelect && tahunSelect && bulanSelect.value && tahunSelect.value) {
         filterByPeriode();
     } else {
         renderFilteredTable(evidenDataCache);
-    }
-    
-    // Load data ke input form (async, tidak blocking)
-    if (typeof muatDataLokal === 'function') {
-        muatDataLokal();
     }
 });
 
@@ -2245,8 +2289,8 @@ async function muatDataLokalIndexedDB() {
         }
     });
 
-    // Sinkronisasi picker bulan/tahun
-   const pInput = document.getElementById('id_periode');
+    // Sinkronisasi picker bulan/tahun TANPA memanggil updatePeriode
+    const pInput = document.getElementById('id_periode');
     if (pInput && pInput.value) {
         var parts = pInput.value.split(' ');
         if (parts.length === 2) {
@@ -2260,7 +2304,8 @@ async function muatDataLokalIndexedDB() {
             }
         }
     }
-    updatePeriode();
+    
+    // Update periode_teks saja (tanpa overwrite id_periode)
     var periodeTeks = document.getElementById('periode_teks');
     if (periodeTeks) {
         var bulanEl = document.getElementById('periode_bulan');
