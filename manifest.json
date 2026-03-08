@@ -1,0 +1,50 @@
+{
+  "name": "EVIDEN LCS GHOSTSCRIPT",
+  "short_name": "Eviden LCS",
+  "description": "Aplikasi dokumentasi eviden konten media sosial untuk laporan bulanan",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#198754",
+  "theme_color": "#198754",
+  "orientation": "portrait-primary",
+  "scope": "./",
+  "lang": "id-ID",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "business"],
+  "screenshots": [
+    {
+      "src": "screenshot.png",
+      "sizes": "1280x720",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Buat Laporan Baru",
+      "short_name": "Laporan Baru",
+      "description": "Mulai membuat laporan eviden baru",
+      "url": "./index.html",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false
+}
