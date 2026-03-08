@@ -616,36 +616,39 @@ function getJumlahBaris() {
     return jumlahBaris || 1;
 }
 
-// ===================== FITUR BACKUP & RESTORE DATA =====================
-function backupData() {
-    const data = {...localStorage};
-    // Ambil semua foto dari IndexedDB
-    if (window.idbGetAllFotoKeys && window.idbGetFoto) {
-        idbGetAllFotoKeys().then(keys => {
-            const fotoPromises = keys.map(k => idbGetFoto(k).then(val => [k, val]));
-            Promise.all(fotoPromises).then(fotoArr => {
-                const fotoData = {};
-                fotoArr.forEach(([k, v]) => { if (v) fotoData[k] = v; });
-                data.__fotoIndexedDB = fotoData;
-                const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                const now = new Date();
-                const tanggal = now.toISOString().slice(0,10);
-                const jam = String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
-                a.download = 'eviden-backup-' + tanggal + '-' + jam + '.json';
-                document.body.appendChild(a);
-                a.click();
-                setTimeout(() => {
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                }, 100);
-            });
-        });
-    } else {
-        // Fallback: backup tanpa foto IndexedDB
-        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+// ===================== FITUR BACKUP & RESTORE DATA (INDEXEDDB!) =====================
+async function backupData() {
+    try {
+        // Ambil SEMUA data teks dari IndexedDB store 'eviden_data'
+        const dataKeys = await idbGetAllDataKeys();
+        const dataObj = {};
+        for (const key of dataKeys) {
+            const value = await idbGetData(key);
+            if (value !== undefined && value !== null) {
+                dataObj[key] = value;
+            }
+        }
+        
+        // Ambil SEMUA foto dari IndexedDB store 'foto'
+        const fotoKeys = await idbGetAllFotoKeys();
+        const fotoObj = {};
+        for (const key of fotoKeys) {
+            const value = await idbGetFoto(key);
+            if (value) {
+                fotoObj[key] = value;
+            }
+        }
+        
+        // Gabungkan data dan foto dengan metadata
+        const backupData = {
+            __dataIndexedDB: dataObj,
+            __fotoIndexedDB: fotoObj,
+            __backupVersion: 2,
+            __backupDate: new Date().toISOString()
+        };
+        
+        // Download sebagai JSON file
+        const blob = new Blob([JSON.stringify(backupData, null, 2)], {type: 'application/json'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -659,41 +662,72 @@ function backupData() {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }, 100);
+        
+        // Update waktu backup terakhir
+        localStorage.setItem('lastBackupTime', Date.now().toString());
+        alert('✅ Backup berhasil! File telah diunduh dengan ' + dataKeys.length + ' data dan ' + fotoKeys.length + ' foto.');
+    } catch (err) {
+        console.error('Backup error:', err);
+        alert('❌ Backup gagal: ' + err.message);
     }
 }
 
-function restoreData(event) {
+async function restoreData(event) {
     const file = event.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         try {
-            const data = JSON.parse(e.target.result);
-            if (typeof data !== 'object' || Array.isArray(data)) throw new Error('Format tidak valid');
-            if (confirm('Data lama akan diganti dengan data backup. Lanjutkan?')) {
-                localStorage.clear();
-                // Restore localStorage
-                for (const key in data) {
-                    if (key !== '__fotoIndexedDB') {
-                        localStorage.setItem(key, data[key]);
+            const backup = JSON.parse(e.target.result);
+            if (typeof backup !== 'object' || Array.isArray(backup)) {
+                throw new Error('Format backup tidak valid');
+            }
+            
+            if (!confirm('⚠️ Data lama akan diganti dengan data backup. Lanjutkan?')) {
+                return;
+            }
+            
+            // Clear IndexedDB stores terlebih dahulu
+            await idbClearAllData();
+            const fotoKeys = await idbGetAllFotoKeys();
+            for (const key of fotoKeys) {
+                await idbDeleteFoto(key);
+            }
+            
+            let dataCount = 0;
+            let fotoCount = 0;
+            
+            // Restore data teks ke IndexedDB eviden_data store
+            if (backup.__dataIndexedDB) {
+                // Format baru (IndexedDB backup)
+                for (const key in backup.__dataIndexedDB) {
+                    await idbSetData(key, backup.__dataIndexedDB[key]);
+                    dataCount++;
+                }
+            } else {
+                // Format lama (localStorage backup) - fallback compatibility
+                for (const key in backup) {
+                    if (key !== '__fotoIndexedDB' && key !== '__backupVersion' && key !== '__backupDate') {
+                        await idbSetData(key, backup[key]);
+                        dataCount++;
                     }
                 }
-                // Restore foto ke IndexedDB jika ada
-                if (data.__fotoIndexedDB && window.idbSetFoto) {
-                    const fotoObj = data.__fotoIndexedDB;
-                    const fotoKeys = Object.keys(fotoObj);
-                    let setPromises = fotoKeys.map(k => idbSetFoto(k, fotoObj[k]));
-                    Promise.all(setPromises).then(() => {
-                        alert('Restore berhasil! Halaman akan dimuat ulang.');
-                        location.reload();
-                    });
-                } else {
-                    alert('Restore berhasil! Halaman akan dimuat ulang.');
-                    location.reload();
+            }
+            
+            // Restore foto ke IndexedDB foto store
+            if (backup.__fotoIndexedDB) {
+                for (const key in backup.__fotoIndexedDB) {
+                    await idbSetFoto(key, backup.__fotoIndexedDB[key]);
+                    fotoCount++;
                 }
             }
+            
+            alert('✅ Restore berhasil!\n\nData: ' + dataCount + '\nFoto: ' + fotoCount + '\n\nHalaman akan dimuat ulang.');
+            location.reload();
+            
         } catch (err) {
-            alert('File backup tidak valid!');
+            console.error('Restore error:', err);
+            alert('❌ Restore gagal: ' + err.message);
         }
     };
     reader.readAsText(file);

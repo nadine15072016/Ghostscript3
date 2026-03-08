@@ -151,11 +151,24 @@ function idbClearAllData() {
     });
 }
 
+function idbClearAllFoto() {
+    return openDB().then(db => {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            store.clear();
+            tx.oncomplete = () => resolve();
+            tx.onerror = e => reject(e);
+        });
+    });
+}
+
 // Export global - FOTO
 window.idbSetFoto = idbSetFoto;
 window.idbGetFoto = idbGetFoto;
 window.idbDeleteFoto = idbDeleteFoto;
 window.idbGetAllFotoKeys = idbGetAllFotoKeys;
+window.idbClearAllFoto = idbClearAllFoto;
 
 // Export global - DATA (NEW!)
 window.idbSetData = idbSetData;
